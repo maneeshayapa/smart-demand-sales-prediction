@@ -5,24 +5,29 @@ import joblib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_PATH = ROOT / "data" / "train.csv"
+HISTORY_PATH = ROOT / "reports" / "deployment_history.csv"
 MODEL_PATH = ROOT / "models" / "sales_prediction_model.joblib"
 
 
 def forecast_next_7_days(product_family):
     # Load historical data and trained model
     try:
-        df = pd.read_csv(DATA_PATH, parse_dates=["date"])
+        df = pd.read_csv(HISTORY_PATH, parse_dates=["date"])
     except FileNotFoundError as error:
         raise FileNotFoundError(
-            f"Dataset not found at expected path '{DATA_PATH}': {error}"
+            "Deployment history not found at expected path "
+            f"'{HISTORY_PATH}'. Generate it locally with "
+            "'python src/model_training.py --history-only' and include "
+            "reports/deployment_history.csv in the deployment."
         ) from error
 
     try:
         saved = joblib.load(MODEL_PATH)
     except FileNotFoundError as error:
         raise FileNotFoundError(
-            f"Saved model not found at expected path '{MODEL_PATH}': {error}"
+            f"Saved model not found at expected path '{MODEL_PATH}'. Generate "
+            "it locally with 'python src/model_training.py' and include "
+            "models/sales_prediction_model.joblib in the deployment."
         ) from error
     model = saved["model"]
     features = saved["features"]
@@ -88,7 +93,15 @@ def forecast_next_7_days(product_family):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(DATA_PATH)
+    try:
+        df = pd.read_csv(HISTORY_PATH)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            "Deployment history not found at expected path "
+            f"'{HISTORY_PATH}'. Generate it locally with "
+            "'python src/model_training.py --history-only' and include "
+            "reports/deployment_history.csv in the deployment."
+        ) from error
 
     families = sorted(df["family"].unique())
     selected_family = families[0]

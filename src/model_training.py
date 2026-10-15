@@ -1,4 +1,5 @@
 
+import argparse
 import pandas as pd
 import numpy as np
 import joblib
@@ -15,6 +16,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 # --------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / "data" / "train.csv"
+HISTORY_PATH = ROOT / "reports" / "deployment_history.csv"
 MODEL_DIR = ROOT / "models"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -38,6 +40,21 @@ data = (
     .sort_values(["family", "date"])
     .reset_index(drop=True)
 )
+
+# Keep the complete daily history before lag features drop the first 14 days.
+deployment_history = data[["date", "family", "sales", "onpromotion"]]
+HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+deployment_history.to_csv(HISTORY_PATH, index=False)
+print("Deployment history saved to:", HISTORY_PATH)
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--history-only",
+    action="store_true",
+    help="Generate the compact deployment history without training the model.",
+)
+if parser.parse_args().history_only:
+    raise SystemExit(0)
 
 # --------------------------------------------------
 # 4. Feature engineering

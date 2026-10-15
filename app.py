@@ -9,7 +9,7 @@ from sklearn.pipeline import Pipeline
 from src.forecast import forecast_next_7_days
 
 ROOT = Path(__file__).resolve().parent
-DATA_PATH = ROOT / "data" / "train.csv"
+DATA_PATH = ROOT / "reports" / "deployment_history.csv"
 RESULTS_PATH = ROOT / "reports" / "model_predictions.csv"
 MODEL_COMPARISON_PATH = ROOT / "reports" / "model_comparison.csv"
 MODEL_PATH = ROOT / "models" / "sales_prediction_model.joblib"
@@ -28,12 +28,25 @@ st.write(
 
 @st.cache_data
 def load_data():
-    df = read_project_csv(DATA_PATH, parse_dates=["date"])
-    return df
+    try:
+        return read_project_csv(DATA_PATH, parse_dates=["date"])
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"Deployment history CSV is missing at '{DATA_PATH}'. Generate "
+            "it locally with `python src/model_training.py --history-only` "
+            "and include reports/deployment_history.csv in the deployment."
+        ) from error
 
 @st.cache_data
 def load_predictions():
-    return read_project_csv(RESULTS_PATH, parse_dates=["date"])
+    try:
+        return read_project_csv(RESULTS_PATH, parse_dates=["date"])
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"Prediction report is missing at '{RESULTS_PATH}'. Generate "
+            "it locally with `python src/model_training.py` and include "
+            "reports/model_predictions.csv in the deployment."
+        ) from error
 
 @st.cache_data
 def load_model_comparison():
@@ -45,7 +58,9 @@ def load_saved_model():
         return joblib.load(MODEL_PATH)
     except FileNotFoundError as error:
         raise FileNotFoundError(
-            f"Saved model not found at expected path '{MODEL_PATH}': {error}"
+            f"Saved model not found at expected path '{MODEL_PATH}'. Generate "
+            "it locally with `python src/model_training.py` and include "
+            "models/sales_prediction_model.joblib in the deployment."
         ) from error
 
 def read_project_csv(path, **kwargs):
@@ -53,7 +68,8 @@ def read_project_csv(path, **kwargs):
         return pd.read_csv(path, **kwargs)
     except FileNotFoundError as error:
         raise FileNotFoundError(
-            f"CSV file not found at expected path '{path}': {error}"
+            f"CSV file not found at expected path '{path}'. Ensure this "
+            "artifact is included in the deployed repository."
         ) from error
 
 try:

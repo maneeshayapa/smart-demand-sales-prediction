@@ -30,13 +30,14 @@ smart-demand-sales-prediction/
 ├── app.py
 ├── requirements.txt
 ├── data/
-│   └── train.csv
+│   └── train.csv                 # Local training input; ignored by Git
 ├── models/
 │   └── sales_prediction_model.joblib
 ├── notebooks/
 ├── reports/
 │   ├── actual_vs_predicted.png
 │   ├── daily_sales.png
+│   ├── deployment_history.csv
 │   ├── model_comparison.csv
 │   ├── model_predictions.csv
 │   └── top_product_families.png
@@ -49,7 +50,7 @@ smart-demand-sales-prediction/
     └── sales_visualization.py
 ```
 
-Generated model and report files are produced or updated by the project scripts. The dashboard expects the training data and prediction records to be present; model comparison results and the saved model are used when available.
+The raw Kaggle CSV is a local training input and is excluded from Git. The dashboard uses the compact `reports/deployment_history.csv` artifact, which contains complete daily sales and promotion totals by product family. Prediction records are required; model comparison results and feature importance are displayed when their corresponding artifacts are available.
 
 ## Installation and setup (Windows PowerShell)
 
@@ -69,29 +70,46 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 .\.venv\Scripts\Activate.ps1
 ```
 
-## Train, compare, and run
+## Generate artifacts and run locally
 
 From the project root, with the virtual environment active:
 
-1. Train the model and create the saved model and test-period prediction records:
+1. Generate the compact dashboard history without retraining the model:
+
+   ```powershell
+   python .\src\model_training.py --history-only
+   ```
+
+   This reads `data/train.csv`, applies the same daily aggregation used for model training (sum `sales` and `onpromotion` by `date` and `family`), and writes `reports/deployment_history.csv`. The history is saved before lag processing removes early rows. Keep the raw Kaggle CSV local; it is intentionally ignored by Git.
+
+2. To train or regenerate the model and test-period prediction records, run:
 
    ```powershell
    python .\src\model_training.py
    ```
 
-2. Compare the Random Forest predictions with the previous-day baseline:
+   This also refreshes `reports/deployment_history.csv`. It retrains and saves the model, so do not run it just to prepare the deployment history.
+
+3. Compare the Random Forest predictions with the previous-day baseline:
 
    ```powershell
    python .\src\compare_models.py
    ```
 
-3. Start the Streamlit dashboard:
+4. Start the Streamlit dashboard:
 
    ```powershell
    streamlit run .\app.py
    ```
 
-The training script reads `data/train.csv` and writes `models/sales_prediction_model.joblib` and `reports/model_predictions.csv`. The comparison script reads those prediction records and writes `reports/model_comparison.csv`. The dashboard reads the training data and prediction records; it displays comparison results and feature importance when their corresponding files are available.
+The comparison script reads the test-period prediction records and writes `reports/model_comparison.csv`. The dashboard reads the compact history and prediction records; it displays model comparison and feature importance when their corresponding files are available. The dashboard does not treat the test-period prediction report as a substitute for complete historical data.
+
+## Deploy to Streamlit Community Cloud
+
+1. On your local checkout, create `reports/deployment_history.csv` using the `--history-only` command above. No model retraining is needed if the existing model and prediction artifacts are still valid.
+2. Ensure the repository contains `app.py`, `src/`, `requirements.txt`, `reports/deployment_history.csv`, `reports/model_predictions.csv`, and `models/sales_prediction_model.joblib`. Include `reports/model_comparison.csv` to retain the model-comparison view. The raw `data/train.csv` is excluded by `.gitignore` and is not needed by the deployed dashboard or forecast.
+3. Push the required project files to a GitHub repository. In Streamlit Community Cloud, create an app from that repository, select the intended branch, and set the main file path to `app.py`.
+4. Deploy the app. If a required artifact is missing, the dashboard reports its expected path and the command needed to generate it.
 
 ## Evaluation metrics
 
