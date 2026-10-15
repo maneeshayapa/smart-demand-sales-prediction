@@ -28,20 +28,33 @@ st.write(
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_PATH, parse_dates=["date"])
+    df = read_project_csv(DATA_PATH, parse_dates=["date"])
     return df
 
 @st.cache_data
 def load_predictions():
-    return pd.read_csv(RESULTS_PATH, parse_dates=["date"])
+    return read_project_csv(RESULTS_PATH, parse_dates=["date"])
 
 @st.cache_data
 def load_model_comparison():
-    return pd.read_csv(MODEL_COMPARISON_PATH)
+    return read_project_csv(MODEL_COMPARISON_PATH)
 
 @st.cache_resource
 def load_saved_model():
-    return joblib.load(MODEL_PATH)
+    try:
+        return joblib.load(MODEL_PATH)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"Saved model not found at expected path '{MODEL_PATH}': {error}"
+        ) from error
+
+def read_project_csv(path, **kwargs):
+    try:
+        return pd.read_csv(path, **kwargs)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"CSV file not found at expected path '{path}': {error}"
+        ) from error
 
 try:
     df = load_data()
@@ -110,8 +123,8 @@ try:
     st.subheader("Model Performance Comparison")
     try:
         model_comparison = load_model_comparison()
-    except FileNotFoundError:
-        st.info("Model comparison results are not available.")
+    except FileNotFoundError as error:
+        st.info(f"Model comparison results are unavailable: {error}")
     else:
         if model_comparison.empty:
             st.info("No model comparison results are available.")
@@ -154,8 +167,11 @@ try:
 
     try:
         saved_model = load_saved_model()
-    except FileNotFoundError:
-        st.info("The trained model is not available for feature importance analysis.")
+    except FileNotFoundError as error:
+        st.info(
+            "The trained model is not available for feature importance "
+            f"analysis: {error}"
+        )
     else:
         if (
             not isinstance(saved_model, dict)
@@ -248,8 +264,5 @@ try:
         mime="text/csv"
     )
 
-except FileNotFoundError:
-    st.error(
-        "Required files were not found. Please run "
-        "python src/model_training.py first."
-    )
+except FileNotFoundError as error:
+    st.error(f"A required project file is missing: {error}")

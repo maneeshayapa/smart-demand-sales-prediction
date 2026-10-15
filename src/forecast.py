@@ -11,9 +11,19 @@ MODEL_PATH = ROOT / "models" / "sales_prediction_model.joblib"
 
 def forecast_next_7_days(product_family):
     # Load historical data and trained model
-    df = pd.read_csv(DATA_PATH, parse_dates=["date"])
+    try:
+        df = pd.read_csv(DATA_PATH, parse_dates=["date"])
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"Dataset not found at expected path '{DATA_PATH}': {error}"
+        ) from error
 
-    saved = joblib.load(MODEL_PATH)
+    try:
+        saved = joblib.load(MODEL_PATH)
+    except FileNotFoundError as error:
+        raise FileNotFoundError(
+            f"Saved model not found at expected path '{MODEL_PATH}': {error}"
+        ) from error
     model = saved["model"]
     features = saved["features"]
 
