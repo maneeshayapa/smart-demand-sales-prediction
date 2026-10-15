@@ -1,0 +1,3 @@
+Model,MAE,RMSE
+Baseline (Previous Day),5275.53,16429.15
+Random Forest,2642.11,9258.43
